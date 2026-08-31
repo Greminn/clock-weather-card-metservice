@@ -43,3 +43,29 @@ export function metserviceIconKey (token: string | undefined | null): string | u
   const base = t.endsWith('-night') ? t.slice(0, -'-night'.length) : t
   return base in METSERVICE_TO_ICON_KEY ? METSERVICE_TO_ICON_KEY[base] : undefined
 }
+
+// Tide icons for the optional tide row (metservice-weather's marine sensors).
+// These aren't in images.ts's condition maps, so they get their own resolver.
+import tideHighFillAnimated from './icons/fill/svg/tide-high.svg'
+import tideHighFillStatic from './icons/fill/svg-static/tide-high.svg'
+import tideHighLineAnimated from './icons/line/svg/tide-high.svg'
+import tideHighLineStatic from './icons/line/svg-static/tide-high.svg'
+import tideLowFillAnimated from './icons/fill/svg/tide-low.svg'
+import tideLowFillStatic from './icons/fill/svg-static/tide-low.svg'
+import tideLowLineAnimated from './icons/line/svg/tide-low.svg'
+import tideLowLineStatic from './icons/line/svg-static/tide-low.svg'
+
+const TIDE_ICONS = {
+  high: {
+    fill: { animated: tideHighFillAnimated, static: tideHighFillStatic },
+    line: { animated: tideHighLineAnimated, static: tideHighLineStatic }
+  },
+  low: {
+    fill: { animated: tideLowFillAnimated, static: tideLowFillStatic },
+    line: { animated: tideLowLineAnimated, static: tideLowLineStatic }
+  }
+}
+
+export function tideIcon (kind: 'high' | 'low', type: 'fill' | 'line', animationKind: 'animated' | 'static'): string {
+  return TIDE_ICONS[kind][type][animationKind]
+}

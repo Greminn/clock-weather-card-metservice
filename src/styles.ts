@@ -7,6 +7,11 @@ export default css`
     height: 100%;
   }
 
+  .card-content {
+    /* tighter than Home Assistant's default 16px, minimal at the top */
+    padding: 0 12px 12px;
+  }
+
   clock-weather-card-today {
     display: flex;
   }
@@ -53,6 +58,185 @@ export default css`
   clock-weather-card-today-right-wrap-bottom {
     display: flex;
     justify-content: start;
+  }
+
+  clock-weather-card-condition {
+    display: block;
+    text-align: center;
+    margin: -0.65rem 0 0.15rem;
+  }
+
+  condition-text {
+    white-space: nowrap;
+  }
+
+  clock-weather-card-description {
+    display: block;
+  }
+
+  description-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-align: center;
+    line-height: 1.25;
+    margin: 0.15rem 0 0.1rem;
+    padding: 0 1rem;
+  }
+
+  clock-weather-card-breakdown {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: start;
+    margin: 0.1rem 0 0.85rem;
+  }
+
+  breakdown-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+  }
+
+  breakdown-cell breakdown-label {
+    margin-top: -0.4rem;
+  }
+
+  breakdown-cell .grow-img {
+    height: var(--mscw-breakdown-icon-size, 3.2rem);
+    width: var(--mscw-breakdown-icon-size, 3.2rem);
+  }
+
+  breakdown-label {
+    white-space: nowrap;
+  }
+
+  clock-weather-card-tides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  clock-weather-card-iframe {
+    display: block;
+    margin-top: 0.9rem;
+  }
+
+  clock-weather-card-iframe iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+  }
+
+  clock-weather-card-tide-graph {
+    display: block;
+    margin-top: 0.9rem;
+  }
+
+  tide-summary {
+    display: block;
+    text-align: center;
+    margin-bottom: 0.1rem;
+  }
+
+  clock-weather-card-tide-graph svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .tide-area {
+    fill: var(--mscw-tide-fill, var(--info-color, #5b8ff9));
+    fill-opacity: 0.18;
+    stroke: none;
+  }
+
+  .tide-line {
+    fill: none;
+    stroke: var(--mscw-tide-stroke, var(--info-color, #5b8ff9));
+    stroke-width: 1.4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .tide-dot {
+    fill: var(--mscw-tide-stroke, var(--info-color, #5b8ff9));
+  }
+
+  .tide-dot-next {
+    fill: var(--primary-text-color, currentColor);
+  }
+
+  .tide-now-dot {
+    fill: var(--mscw-tide-stroke, var(--info-color, #5b8ff9));
+    stroke: var(--card-background-color, #fff);
+    stroke-width: 1.5;
+  }
+
+  .tide-grid {
+    stroke: var(--divider-color, currentColor);
+    stroke-opacity: 0.35;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .tide-now {
+    stroke: var(--primary-text-color, currentColor);
+    stroke-opacity: 0.5;
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .tide-tick,
+  .tide-day,
+  .tide-axis,
+  .tide-now-label {
+    fill: var(--secondary-text-color, currentColor);
+    font-size: 8px;
+    text-transform: uppercase;
+  }
+
+  .tide-day,
+  .tide-now-label {
+    font-weight: 600;
+    fill: var(--primary-text-color, currentColor);
+  }
+
+  tide-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  tide-cell .grow-img {
+    height: 2rem;
+    width: 2rem;
+    flex: 0 0 auto;
+  }
+
+  tide-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  tide-label {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  tide-time {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    white-space: nowrap;
   }
 
   clock-weather-card-forecast {

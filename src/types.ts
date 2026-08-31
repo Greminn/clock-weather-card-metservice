@@ -17,7 +17,33 @@ export interface ClockWeatherCardConfig extends LovelaceCardConfig {
   // attribute is a list of `{ date, condition }` for the forecast rows. Icons
   // for the today section and any matching forecast row are then resolved from
   // the raw token instead of Home Assistant's collapsed `weather` condition.
+  // MetService fork: show the te reo Māori day name alongside the English one
+  // in the date line, e.g. "Monday/Rāhina, 31 August 2026".
+  maori_day_names?: boolean
   condition_entity?: string
+  // MetService fork: an entity whose state is a plain-English forecast summary
+  // (e.g. sensor.<location>_weather_description) shown as a line under the today
+  // section. Uses the `full_description` attribute when the state is truncated.
+  description_entity?: string
+  // MetService fork: a compact "today, part by part" row (morning/afternoon/
+  // evening/overnight) from the integration's `*_condition_<part>` sensors —
+  // each entity's state is a raw MetService token, icon-mapped like the forecast.
+  today_breakdown?: string[]
+  // MetService fork: an optional tide section from the integration's marine
+  // sensors.
+  //  - tide_entity: a sensor with a `tide_table` attribute (the integration's
+  //    `<region> Tide direction` sensor) -> a MetService-style tide curve.
+  //  - tide_high_entity / tide_low_entity: next-high / next-low timestamp
+  //    sensors -> a compact two-cell "next tide" row (used when tide_entity
+  //    is not set).
+  tide_entity?: string
+  tide_high_entity?: string
+  tide_low_entity?: string
+  // MetService fork: embed a page (e.g. a Windy map at /local/windy.html) in
+  // its own row, above the tide section. iframe_height accepts a number (px)
+  // or any CSS length.
+  iframe_url?: string
+  iframe_height?: string | number
   sun_entity?: string
   temperature_sensor?: string
   humidity_sensor?: string
@@ -44,7 +70,15 @@ export interface ClockWeatherCardConfig extends LovelaceCardConfig {
 export interface MergedClockWeatherCardConfig extends LovelaceCardConfig {
   entity: string
   title?: string
+  maori_day_names?: boolean
   condition_entity?: string
+  description_entity?: string
+  today_breakdown?: string[]
+  tide_entity?: string
+  tide_high_entity?: string
+  tide_low_entity?: string
+  iframe_url?: string
+  iframe_height?: string | number
   sun_entity: string
   temperature_sensor?: string
   humidity_sensor?: string

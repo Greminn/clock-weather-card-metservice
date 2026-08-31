@@ -19,21 +19,25 @@
 
 ## What's different from upstream
 
-- The card is registered as `custom:clock-weather-card-metservice` (and ships as
-  `clock-weather-card-metservice.js`), so it installs alongside the original without clashing.
-- **`condition_entity`** (see [Options](#options)) — when set, the today icon and the forecast-row
-  icons are chosen from MetService's raw, un-mapped condition token instead of Home Assistant's
-  collapsed `weather` condition. `few-showers` → sun-shower icon, `showers`/`rain` → heavier rain,
-  and so on. Without it the card behaves exactly like upstream.
-
-The raw tokens come from the [`metservice-weather`](https://github.com/nagelm/metservice-weather)
-integration (>= `2026.9.0`, [#33](https://github.com/nagelm/metservice-weather/issues/33)): point
-`condition_entity` at **`sensor.<location>_condition_today`**. The card reads its **state** for the
-today icon and its **`daily_conditions`** attribute (`[{ date, condition }]`, one per forecast day)
-for the row icons. On older integration versions, feed it any template sensor of the same shape.
-
-Everything else tracks upstream — for the base card, its options and its issues, see
+The card is registered as `custom:clock-weather-card-metservice` (and ships as
+`clock-weather-card-metservice.js`), so it installs alongside the original without clashing.
+It adds a handful of **optional** rows/behaviours — omit them all and the card behaves exactly
+like upstream. Everything else tracks upstream; for the base card and its options see
 [`pkissling/clock-weather-card`](https://github.com/pkissling/clock-weather-card).
+
+| Option | What it does |
+|---|---|
+| `condition_entity` | Point at `sensor.<location>_condition_today` from [`metservice-weather`](https://github.com/nagelm/metservice-weather) `>= 2026.9.0` ([#33](https://github.com/nagelm/metservice-weather/issues/33)). The card reads its **state** for the today icon and its **`daily_conditions`** attribute (`[{ date, condition }]`) for the forecast-row icons, so `few-showers` shows a sun-shower icon rather than HA's collapsed `rainy`. On older integration versions feed it any template sensor of the same shape. |
+| `description_entity` | A plain-English forecast summary (e.g. `sensor.<location>_weather_description`) shown centred under the clock; clamped to 2 lines. |
+| `today_breakdown` | A list of 4 `sensor.<location>_condition_{morning,afternoon,evening,overnight}` entities → a compact "today, part by part" icon row. |
+| `tide_entity` | A sensor with a `tide_table` attribute (the integration's `<region> Tide direction` sensor) → a ~24 h tide curve with the current level, next low/high, and a "Tides are rising, next high tide in N hours" line. |
+| `tide_high_entity` / `tide_low_entity` | Next-high / next-low timestamp sensors → a simple two-cell "next tide" row (used when `tide_entity` is not set). |
+| `iframe_url` / `iframe_height` | Embed a page (e.g. a Windy map) in its own row above the tide section. `iframe_height` takes a number (px) or any CSS length. |
+| `maori_day_names` | Show the te reo Māori day name alongside the English one in the date line — "Monday/Rāhina, 31 August 2026". |
+
+See [`src/metservice-icons.ts`](src/metservice-icons.ts) for the condition → icon map, and the
+CSS custom properties `--mscw-breakdown-icon-size`, `--mscw-tide-stroke`, `--mscw-tide-fill` for
+light theming.
 
 ### MetService condition → icon
 

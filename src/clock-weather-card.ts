@@ -1,4 +1,4 @@
-import { LitElement, html, type TemplateResult, type PropertyValues, type CSSResultGroup } from 'lit'
+import { LitElement, html, svg, type TemplateResult, type PropertyValues, type CSSResultGroup } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import {
   type HomeAssistant,
@@ -29,7 +29,7 @@ import { localize } from './localize/localize'
 import { type HassEntity, type HassEntityBase } from 'home-assistant-js-websocket'
 import { extractMostOccuring, max, min, roundIfNotNull, roundUp } from './utils'
 import { animatedIcons, staticIcons } from './images'
-import { metserviceIconKey } from './metservice-icons'
+import { metserviceIconKey, tideIcon } from './metservice-icons'
 import { version } from '../package.json'
 import { safeRender } from './helpers'
 import { DateTime } from 'luxon'
@@ -177,11 +177,46 @@ export class ClockWeatherCard extends LitElement {
               ${safeRender(() => this.renderToday())}
             </clock-weather-card-today>`
         : ''}
+          ${showToday
+        ? html`
+            <clock-weather-card-condition>
+              ${safeRender(() => this.renderConditionLine())}
+            </clock-weather-card-condition>`
+        : ''}
+          ${this.config.description_entity
+        ? html`
+            <clock-weather-card-description>
+              ${safeRender(() => this.renderDescription())}
+            </clock-weather-card-description>`
+        : ''}
+          ${this.config.today_breakdown?.length
+        ? html`
+            <clock-weather-card-breakdown>
+              ${safeRender(() => this.renderTodayBreakdown())}
+            </clock-weather-card-breakdown>`
+        : ''}
           ${showForecast
         ? html`
             <clock-weather-card-forecast>
               ${safeRender(() => this.renderForecast())}
             </clock-weather-card-forecast>`
+        : ''}
+          ${this.config.iframe_url
+        ? html`
+            <clock-weather-card-iframe>
+              ${safeRender(() => this.renderIframe())}
+            </clock-weather-card-iframe>`
+        : ''}
+          ${this.config.tide_entity
+        ? html`
+            <clock-weather-card-tide-graph>
+              ${safeRender(() => this.renderTideGraph())}
+            </clock-weather-card-tide-graph>`
+        : this.config.tide_high_entity && this.config.tide_low_entity
+        ? html`
+            <clock-weather-card-tides>
+              ${safeRender(() => this.renderTides())}
+            </clock-weather-card-tides>`
         : ''}
         </div>
       </ha-card>
@@ -212,20 +247,11 @@ export class ClockWeatherCard extends LitElement {
     const state = weather.state
     const temp = this.config.show_decimal ? this.getCurrentTemperature() : roundIfNotNull(this.getCurrentTemperature())
     const tempUnit = weather.attributes.temperature_unit
-    const apparentTemp = this.config.show_decimal ? this.getApparentTemperature() : roundIfNotNull(this.getApparentTemperature())
-    const aqi = this.getAqi()
-    const aqiBackgroundColor = this.getAqiBackgroundColor(aqi)
-    const aqiTextColor = this.getAqiTextColor(aqi)
-    const humidity = roundIfNotNull(this.getCurrentHumidity())
     const iconType = this.config.weather_icon_type
     const msIconKey = metserviceIconKey(this.metserviceCondition())
-    const icon = this.toIcon(msIconKey ?? state, iconType, false, this.getIconAnimationKind())
+    const icon = this.toIcon(msIconKey ?? state, iconType, 'auto', this.getIconAnimationKind())
     const weatherString = this.localize(`weather.${state}`)
     const localizedTemp = temp !== null ? this.toConfiguredTempWithUnit(tempUnit, temp) : null
-    const localizedHumidity = humidity !== null ? `${humidity}% ${this.localize('misc.humidity')}` : null
-    const localizedApparent = apparentTemp !== null ? this.toConfiguredTempWithUnit(tempUnit, apparentTemp) : null
-    const apparentString = this.localize('misc.feels-like')
-    const aqiString = this.localize('misc.aqi')
 
     return html`
       <clock-weather-card-today-left>
@@ -234,10 +260,7 @@ export class ClockWeatherCard extends LitElement {
       <clock-weather-card-today-right>
         <clock-weather-card-today-right-wrap>
           <clock-weather-card-today-right-wrap-top>
-            ${this.config.hide_clock ? weatherString : localizedTemp ? `${weatherString}, ${localizedTemp}` : weatherString}
-            ${this.config.show_humidity && localizedHumidity ? html`<br>${localizedHumidity}` : ''}
-            ${this.config.apparent_sensor && apparentTemp ? html`<br>${apparentString}: ${localizedApparent}` : ''}
-            ${this.config.aqi_sensor && aqi !== null ? html`<br><aqi style="background-color: ${aqiBackgroundColor}; color: ${aqiTextColor};">${aqi} ${aqiString}</aqi>` : ''}
+            ${this.config.hide_clock ? weatherString : ''}
           </clock-weather-card-today-right-wrap-top>
           <clock-weather-card-today-right-wrap-center>
             ${this.config.hide_clock ? localizedTemp ?? 'n/a' : this.time()}
@@ -247,6 +270,33 @@ export class ClockWeatherCard extends LitElement {
           </clock-weather-card-today-right-wrap-bottom>
         </clock-weather-card-today-right-wrap>
       </clock-weather-card-today-right>`
+  }
+
+  // MetService fork: the current condition / temperature / feels-like line,
+  // shown centred just above the forecast rather than in the today section.
+  private renderConditionLine (): TemplateResult {
+    const weather = this.getWeather()
+    const tempUnit = weather.attributes.temperature_unit
+    const temp = this.config.show_decimal ? this.getCurrentTemperature() : roundIfNotNull(this.getCurrentTemperature())
+    const apparentTemp = this.config.show_decimal ? this.getApparentTemperature() : roundIfNotNull(this.getApparentTemperature())
+    const humidity = roundIfNotNull(this.getCurrentHumidity())
+    const aqi = this.getAqi()
+    const weatherString = this.localize(`weather.${weather.state}`)
+    const localizedTemp = temp !== null ? this.toConfiguredTempWithUnit(tempUnit, temp) : null
+
+    const parts: string[] = [localizedTemp ? `${weatherString}, ${localizedTemp}` : weatherString]
+    if (this.config.apparent_sensor && apparentTemp !== null) {
+      parts.push(`${this.localize('misc.feels-like')}: ${this.toConfiguredTempWithUnit(tempUnit, apparentTemp)}`)
+    }
+    if (this.config.show_humidity && humidity !== null) {
+      parts.push(`${humidity}% ${this.localize('misc.humidity')}`)
+    }
+    return html`
+      <condition-text>${parts.join(' · ')}</condition-text>
+      ${this.config.aqi_sensor && aqi !== null
+        ? html`<aqi style="background-color: ${this.getAqiBackgroundColor(aqi)}; color: ${this.getAqiTextColor(aqi)};">${aqi} ${this.localize('misc.aqi')}</aqi>`
+        : ''}
+    `
   }
 
   private renderForecast (): TemplateResult[] {
@@ -282,7 +332,7 @@ export class ClockWeatherCard extends LitElement {
     // stock rows keep upstream's 'fill' + the pouring/rainy glyph remap.
     const weatherState = msIconKey ?? (forecast.condition === 'pouring' ? 'raindrops' : forecast.condition === 'rainy' ? 'raindrop' : forecast.condition)
     const iconType = msIconKey ? this.config.weather_icon_type : 'fill'
-    const weatherIcon = this.toIcon(weatherState, iconType, true, 'static')
+    const weatherIcon = this.toIcon(weatherState, iconType, 'day', 'static')
     const tempUnit = this.getWeather().attributes.temperature_unit
     const isNow = hourly ? DateTime.now().hour === forecast.datetime.hour : DateTime.now().day === forecast.datetime.day
     const minTempDay = Math.round(isNow && currentTemp !== null ? Math.min(currentTemp, forecast.templow) : forecast.templow)
@@ -296,6 +346,195 @@ export class ClockWeatherCard extends LitElement {
         ${this.renderForecastTemperatureBar(minTemp, maxTemp, minTempDay, maxTempDay, isNow, currentTemp, temperatureUnit)}
         ${this.renderText(this.toConfiguredTempWithUnit(tempUnit, maxTempDay))}
       </clock-weather-card-forecast-row>
+    `
+  }
+
+  // MetService fork: plain-English forecast summary line.
+  private renderDescription (): TemplateResult {
+    const entity = this.config.description_entity ? this.hass.states[this.config.description_entity] : undefined
+    if (!entity) return html``
+    const text = (entity.attributes?.full_description as string | undefined) ?? entity.state
+    if (!text || text === 'unknown' || text === 'unavailable') return html``
+    return html`<description-text>${text}</description-text>`
+  }
+
+  // MetService fork: compact "today, part by part" row. Each configured entity
+  // (sensor.<location>_condition_<part>) has a raw MetService token as its state.
+  private renderTodayBreakdown (): TemplateResult {
+    const entities = this.config.today_breakdown ?? []
+    const kind = this.getIconAnimationKind()
+    return html`
+      ${entities.map((entityId) => {
+        const entity = this.hass.states[entityId]
+        if (!entity) return html``
+        const rawName = (entity.attributes?.friendly_name as string | undefined) ?? entityId
+        const label = rawName.split(/[\s_]+/).pop() ?? rawName
+        const isNight = /night|overnight/i.test(label)
+        const iconKey = metserviceIconKey(entity.state) ?? 'cloudy'
+        const icon = this.toIcon(iconKey, this.config.weather_icon_type, isNight ? 'night' : 'day', kind)
+        return html`
+          <breakdown-cell>
+            <img class="grow-img" src=${icon} />
+            <breakdown-label>${label.charAt(0).toUpperCase() + label.slice(1)}</breakdown-label>
+          </breakdown-cell>`
+      })}
+    `
+  }
+
+  // MetService fork: an embedded page (e.g. a Windy map served from /local/).
+  private renderIframe (): TemplateResult {
+    const url = this.config.iframe_url
+    if (!url) return html``
+    const h = this.config.iframe_height
+    const height = h === undefined ? '200px' : typeof h === 'number' ? `${h}px` : h
+    return html`<iframe src=${url} style="height: ${height};" loading="lazy" referrerpolicy="no-referrer"></iframe>`
+  }
+
+  // MetService fork: a tide curve for the next ~24 h from the `tide_table`
+  // attribute (list of { type: HIGH|LOW, time: ISO, height: metres }) — shows
+  // where the tide is right now plus the upcoming lows and highs. The curve
+  // between two consecutive extremes is the standard half-cosine tide
+  // approximation.
+  private tideHeightAt (a: { t: DateTime, h: number }, b: { t: DateTime, h: number }, ms: number): number {
+    const f = (ms - a.t.toMillis()) / (b.t.toMillis() - a.t.toMillis())
+    return (a.h + b.h) / 2 + ((a.h - b.h) / 2) * Math.cos(Math.PI * Math.min(1, Math.max(0, f)))
+  }
+
+  private renderTideGraph (): TemplateResult {
+    const entity = this.config.tide_entity ? this.hass.states[this.config.tide_entity] : undefined
+    const table = entity?.attributes?.tide_table as Array<{ type?: string, time?: string, height?: string | number }> | undefined
+    if (!Array.isArray(table) || table.length < 2) return html``
+
+    const all = table
+      .map((e) => ({ t: DateTime.fromISO(String(e.time)), h: parseFloat(String(e.height)), high: String(e.type).toUpperCase() === 'HIGH' }))
+      .filter((p) => p.t.isValid && !isNaN(p.h))
+      .sort((a, b) => a.t.toMillis() - b.t.toMillis())
+
+    const now = DateTime.now()
+    const winStart = now.minus({ hours: 2 }).toMillis()
+    const winEnd = now.plus({ hours: 24 }).toMillis()
+    // bracket the window with one extreme either side so the curve is continuous
+    const firstAfterStart = all.findIndex((p) => p.t.toMillis() > winStart)
+    const startIdx = firstAfterStart <= 0 ? 0 : firstAfterStart - 1
+    let endIdx = all.findIndex((p) => p.t.toMillis() >= winEnd)
+    if (endIdx === -1) endIdx = all.length - 1
+    const seg = all.slice(startIdx, endIdx + 1)
+    if (seg.length < 2) return html``
+
+    const W = 320
+    const H = 72
+    const pad = { l: 4, r: 4, t: 18, b: 15 }
+    const heights = seg.map((p) => p.h)
+    let hMin = Math.min(...heights)
+    let hMax = Math.max(...heights)
+    const range = hMax - hMin || 1
+    hMin -= range * 0.22
+    hMax += range * 0.28
+
+    const x = (ms: number): number => pad.l + ((ms - winStart) / (winEnd - winStart)) * (W - pad.l - pad.r)
+    const y = (h: number): number => pad.t + ((hMax - h) / (hMax - hMin)) * (H - pad.t - pad.b)
+
+    const curve: Array<[number, number]> = []
+    for (let i = 0; i < seg.length - 1; i++) {
+      const a = seg[i]
+      const b = seg[i + 1]
+      for (let s = i === 0 ? 0 : 1; s <= 24; s++) {
+        const f = s / 24
+        const ms = a.t.toMillis() + f * (b.t.toMillis() - a.t.toMillis())
+        curve.push([x(ms), y(this.tideHeightAt(a, b, ms))])
+      }
+    }
+    const linePath = 'M ' + curve.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' L ')
+    const areaPath = `${linePath} L ${curve[curve.length - 1][0].toFixed(1)},${(H - pad.b).toFixed(1)} L ${curve[0][0].toFixed(1)},${(H - pad.b).toFixed(1)} Z`
+
+    // current tide height
+    const nowMs = now.toMillis()
+    let hNow: number | undefined
+    for (let i = 0; i < seg.length - 1; i++) {
+      if (nowMs >= seg[i].t.toMillis() && nowMs <= seg[i + 1].t.toMillis()) { hNow = this.tideHeightAt(seg[i], seg[i + 1], nowMs); break }
+    }
+
+    const visible = seg.filter((p) => p.t.toMillis() >= winStart && p.t.toMillis() <= winEnd)
+    const nextLow = visible.find((p) => !p.high && p.t.toMillis() >= nowMs)
+    const nextHigh = visible.find((p) => p.high && p.t.toMillis() >= nowMs)
+
+    // contextual summary line — direction + the next matching tide + time to it
+    const direction = String(entity?.state ?? '').toLowerCase()
+    const nextExtreme = direction === 'rising'
+      ? nextHigh
+      : direction === 'falling'
+        ? nextLow
+        : (nextLow && nextHigh ? (nextLow.t < nextHigh.t ? nextLow : nextHigh) : (nextLow ?? nextHigh))
+    let summary = ''
+    if (nextExtreme) {
+      const mins = Math.max(0, Math.round((nextExtreme.t.toMillis() - nowMs) / 60000))
+      const when = mins < 60
+        ? `${mins} minute${mins === 1 ? '' : 's'}`
+        : `${Math.round(mins / 60)} hour${Math.round(mins / 60) === 1 ? '' : 's'}`
+      const dirWord = direction === 'rising' || direction === 'falling'
+        ? direction
+        : (nextExtreme.high ? 'rising' : 'falling')
+      summary = `Tides are ${dirWord}, next ${nextExtreme.high ? 'high' : 'low'} tide in ${when}`
+    }
+
+    // midnight boundary within the window
+    const midnight = now.plus({ days: 1 }).startOf('day')
+    const midnightVisible = midnight.toMillis() > winStart && midnight.toMillis() < winEnd
+    const mz = this.toZonedDate(midnight)
+
+    return html`
+      ${summary ? html`<tide-summary>${summary}</tide-summary>` : ''}
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%">
+        <clipPath id="mscw-tide-clip"><rect x="0" y="0" width=${W} height=${H - pad.b + 0.5} /></clipPath>
+        ${midnightVisible
+          ? svg`<line class="tide-grid" x1=${x(midnight.toMillis()).toFixed(1)} y1=${pad.t} x2=${x(midnight.toMillis()).toFixed(1)} y2=${H - pad.b} />
+                <text class="tide-day" x=${(x(midnight.toMillis()) + 2).toFixed(1)} y="10" text-anchor="start">${`${this.localize(`day.${mz.weekday}`)} ${mz.toFormat('d LLL')}`.toUpperCase()}</text>`
+          : ''}
+        <g clip-path="url(#mscw-tide-clip)">
+          <path class="tide-area" d=${areaPath} />
+          <path class="tide-line" d=${linePath} />
+        </g>
+        <line class="tide-now" x1=${x(nowMs).toFixed(1)} y1=${pad.t - 6} x2=${x(nowMs).toFixed(1)} y2=${H - pad.b} />
+        ${hNow !== undefined
+          ? svg`<circle class="tide-now-dot" cx=${x(nowMs).toFixed(1)} cy=${y(hNow).toFixed(1)} r="2.8" />
+                <text class="tide-now-label" x=${x(nowMs).toFixed(1)} y=${pad.t - 8} text-anchor="middle">Now ${hNow.toFixed(1)}m</text>`
+          : ''}
+        ${visible.map((p) => {
+          const isNext = p === nextLow || p === nextHigh
+          return svg`
+            <circle class="${isNext ? 'tide-dot tide-dot-next' : 'tide-dot'}" cx=${x(p.t.toMillis()).toFixed(1)} cy=${y(p.h).toFixed(1)} r=${isNext ? 2.6 : 2} />
+            <text class="tide-tick" x=${x(p.t.toMillis()).toFixed(1)} y=${H - 4} text-anchor="middle">${p.high ? 'H' : 'L'} ${this.time(p.t)}</text>`
+        })}
+      </svg>
+    `
+  }
+
+  // MetService fork: next high / next low tide, next event first.
+  private renderTides (): TemplateResult {
+    const kind = this.getIconAnimationKind()
+    const type = this.config.weather_icon_type
+    const cells: Array<{ when: DateTime, kind: 'high' | 'low' }> = []
+    for (const [k, entityId] of [['high', this.config.tide_high_entity], ['low', this.config.tide_low_entity]] as const) {
+      const raw = entityId ? this.hass.states[entityId]?.state : undefined
+      const when = raw ? DateTime.fromISO(raw) : undefined
+      if (when?.isValid) cells.push({ when, kind: k })
+    }
+    cells.sort((a, b) => a.when.toMillis() - b.when.toMillis())
+    return html`
+      ${cells.map(({ when, kind: tideKind }) => {
+        const zoned = this.toZonedDate(when)
+        const sameDay = zoned.hasSame(this.toZonedDate(this.currentDate), 'day')
+        const label = tideKind === 'high' ? 'Next High Tide' : 'Next Low Tide'
+        const timeText = sameDay ? this.time(when) : `${this.localize(`day.${zoned.weekday}`)} ${this.time(when)}`
+        return html`
+          <tide-cell>
+            <img class="grow-img" src=${tideIcon(tideKind, type, kind)} />
+            <tide-text>
+              <tide-label>${label}</tide-label>
+              <tide-time>${timeText}</tide-time>
+            </tide-text>
+          </tide-cell>`
+      })}
     `
   }
 
@@ -469,7 +708,15 @@ export class ClockWeatherCard extends LitElement {
       hide_clock: config.hide_clock ?? false,
       hide_date: config.hide_date ?? false,
       date_pattern: config.date_pattern ?? 'D',
+      maori_day_names: config.maori_day_names ?? false,
       condition_entity: config.condition_entity ?? undefined,
+      description_entity: config.description_entity ?? undefined,
+      today_breakdown: config.today_breakdown ?? undefined,
+      tide_entity: config.tide_entity ?? undefined,
+      tide_high_entity: config.tide_high_entity ?? undefined,
+      tide_low_entity: config.tide_low_entity ?? undefined,
+      iframe_url: config.iframe_url ?? undefined,
+      iframe_height: config.iframe_height ?? undefined,
       use_browser_time: config.use_browser_time ?? false,
       time_zone: config.time_zone ?? undefined,
       show_decimal: config.show_decimal ?? false,
@@ -478,11 +725,11 @@ export class ClockWeatherCard extends LitElement {
     }
   }
 
-  private toIcon (weatherState: string, type: 'fill' | 'line', forceDay: boolean, kind: 'static' | 'animated'): string {
-    const daytime = forceDay ? 'day' : this.getSun()?.state === 'below_horizon' ? 'night' : 'day'
+  private toIcon (weatherState: string, type: 'fill' | 'line', daytime: 'day' | 'night' | 'auto', kind: 'static' | 'animated'): string {
+    const resolved = daytime !== 'auto' ? daytime : this.getSun()?.state === 'below_horizon' ? 'night' : 'day'
     const iconMap = kind === 'animated' ? animatedIcons : staticIcons
     const icon = iconMap[type][weatherState]
-    return icon?.[daytime] || icon
+    return icon?.[resolved] || icon
   }
 
   // MetService fork: raw MetService condition token for a given day, or for the
@@ -601,7 +848,15 @@ export class ClockWeatherCard extends LitElement {
   }
 
   private date (): string {
-    return this.toZonedDate(this.currentDate).toFormat(this.config.date_pattern)
+    const zoned = this.toZonedDate(this.currentDate)
+    const formatted = zoned.toFormat(this.config.date_pattern)
+    if (!this.config.maori_day_names) return formatted
+    // e.g. "Monday, 31 August 2026" -> "Monday/Rāhina, 31 August 2026"
+    const maori = ['Rāhina', 'Rātū', 'Rāapa', 'Rāpare', 'Rāmere', 'Rāhoroi', 'Rātapu'][zoned.weekday - 1]
+    const englishDay = zoned.toFormat('cccc')
+    return maori && formatted.includes(englishDay)
+      ? formatted.replace(englishDay, `${englishDay}/${maori}`)
+      : formatted
   }
 
   private time (date: DateTime = this.currentDate): string {
