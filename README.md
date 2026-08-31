@@ -27,10 +27,10 @@
   and so on. Without it the card behaves exactly like upstream.
 
 The raw tokens come from the [`metservice-weather`](https://github.com/nagelm/metservice-weather)
-integration. A first-class `sensor.<location>_condition` for this is requested in
-[nagelm/metservice-weather#33](https://github.com/nagelm/metservice-weather/issues/33); until it
-lands you can feed `condition_entity` a template sensor built from the integration's existing
-`*_condition_morning/afternoon/evening/overnight` and `*_condition_tomorrow` sensors.
+integration (>= `2026.9.0`, [#33](https://github.com/nagelm/metservice-weather/issues/33)): point
+`condition_entity` at **`sensor.<location>_condition_today`**. The card reads its **state** for the
+today icon and its **`daily_conditions`** attribute (`[{ date, condition }]`, one per forecast day)
+for the row icons. On older integration versions, feed it any template sensor of the same shape.
 
 Everything else tracks upstream — for the base card, its options and its issues, see
 [`pkissling/clock-weather-card`](https://github.com/pkissling/clock-weather-card).
@@ -133,7 +133,7 @@ entity: weather.home  # replace with your weather provider's entity id
 ```yaml
 type: custom:clock-weather-card-metservice
 entity: weather.home  # replace with your weather provider's entity id
-condition_entity: sensor.home_metservice_conditions  # MetService raw-condition source (optional)
+condition_entity: sensor.home_condition_today  # MetService raw-condition source (optional)
 title: Home
 sun_entity: sun.sun
 temperature_sensor: sensor.outdoor_temp
@@ -164,7 +164,7 @@ aqi_sensor: sensor.air_quality_index
 | --------------------- | ---------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | type                  | string           | **Required** | `custom:clock-weather-card-metservice`                                                                                                                                                                                            |           |
 | entity                | string           | **Required** | ID of the weather entity                                                                                                                                                                                                          |           |
-| condition_entity      | string           | **Optional** | ID of an entity supplying MetService's raw condition token(s). Its **state** sets the today icon; its optional **`forecast`** attribute — a list of `{ date, condition }` — sets the forecast-row icons (rows with no match fall back to the `entity` weather condition). Unset ⇒ card behaves like upstream. | `''` |
+| condition_entity      | string           | **Optional** | ID of an entity supplying MetService's raw condition token(s) — normally `sensor.<location>_condition_today` from `metservice-weather`. Its **state** sets the today icon; its **`daily_conditions`** attribute (a list of `{ date, condition }`; `forecast` also accepted) sets the forecast-row icons, matched by date (rows with no match fall back to the `entity` weather condition). Unset ⇒ card behaves like upstream. | `''` |
 | title                 | string           | **Optional** | Title of the card                                                                                                                                                                                                                 | `''`      |
 | sun_entity            | boolean          | **Optional** | ID of the sun entity. Used to determine whether to show a day or night icon. If sun integration is not enabled, day icon will be shown                                                                                            | `sun.sun` |
 | temperature_sensor    | string           | **Optional** | ID of the temperature sensor entity. Used to show the current temperature based on a sensor value instead of the weather forecast                                                                                                 | `''`      |

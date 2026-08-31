@@ -485,17 +485,25 @@ export class ClockWeatherCard extends LitElement {
     return icon?.[daytime] || icon
   }
 
-  // MetService fork: raw MetService condition token for a given day (from the
-  // `forecast` attribute of `condition_entity`), or for the current conditions
-  // (that entity's state) when no date is given. Returns undefined when the
-  // option is unset, the entity is missing, or no forecast entry matches.
+  // MetService fork: raw MetService condition token for a given day, or for the
+  // current conditions (the `condition_entity` state) when no date is given.
+  //
+  // Per-day tokens come from that entity's `daily_conditions` attribute — the
+  // list `sensor.<location>_condition_today` exposes in metservice-weather
+  // >= 2026.9.0 ([{ date, condition }], keyed by date). `forecast` is also
+  // accepted for a hand-rolled template sensor. Match on `date`, never list
+  // position (entry 0 can lag the wall clock by a poll just after midnight).
+  //
+  // Returns undefined when the option is unset, the entity is missing, or no
+  // entry matches — the caller then falls back to the stock icon.
   private metserviceCondition (date?: DateTime): string | undefined {
     const entityId = this.config.condition_entity
     if (!entityId) return undefined
     const entity = this.hass.states[entityId]
     if (!entity) return undefined
     if (!date) return typeof entity.state === 'string' ? entity.state : undefined
-    const list = entity.attributes?.forecast as Array<{ date?: string, datetime?: string, condition?: string }> | undefined
+    const list = (entity.attributes?.daily_conditions ?? entity.attributes?.forecast) as
+      Array<{ date?: string, datetime?: string, condition?: string }> | undefined
     if (!Array.isArray(list)) return undefined
     const iso = date.toISODate()
     const match = list.find((e) => {
