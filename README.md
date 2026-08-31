@@ -1,35 +1,36 @@
-# Clock Weather Card
+# Clock Weather Card (MetService)
 
-[![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![Total downloads](https://img.shields.io/github/downloads/pkissling/clock-weather-card/total)](https://github.com/pkissling/clock-weather-card/releases)
-[![Downloads of latest version (latest by SemVer)](https://img.shields.io/github/downloads/pkissling/clock-weather-card/latest/total?sort=semver)](https://github.com/pkissling/clock-weather-card/releases/latest)
-[![Current version](https://img.shields.io/github/v/release/pkissling/clock-weather-card)](https://github.com/pkissling/clock-weather-card/releases/latest)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
-A [Home Assistant Dashboard Card](https://www.home-assistant.io/dashboards/) available through the [Home Assistant Community Store](https://hacs.xyz)
-showing the current date, time and a weather forecast.
+> **A fork of [`pkissling/clock-weather-card`](https://github.com/pkissling/clock-weather-card).**
+> All the credit for the card belongs to [Patrick Kissling](https://github.com/pkissling) and its
+> contributors, and to [basmilius](https://github.com/basmilius) for the
+> [weather icons](https://github.com/basmilius/weather-icons). This fork exists only to make the
+> weather icons match the [MetService](https://www.metservice.com/) (New Zealand) app — MetService
+> draws conditions such as **few showers** (sun + cloud + rain) that Home Assistant's fixed
+> `weather` condition set can't represent, so the stock card shows plain rain instead.
+
+## What's different from upstream
+
+- The card is registered as `custom:clock-weather-card-metservice` (and ships as
+  `clock-weather-card-metservice.js`), so it installs alongside the original without clashing.
+- **Planned:** a `condition_entity` option that drives the weather icons from the raw MetService
+  condition tokens exposed by the [`metservice-weather`](https://github.com/nagelm/metservice-weather)
+  integration (see [nagelm/metservice-weather#33](https://github.com/nagelm/metservice-weather/issues/33)),
+  mapping each MetService icon to its closest match in the bundled icon set.
+
+Until the icon work lands, this fork is functionally identical to upstream `v2.9.4` apart from the
+card name. Track upstream for the base card; open issues here only for the MetService behaviour.
+
+---
+
+A [Home Assistant Dashboard Card](https://www.home-assistant.io/dashboards/) showing the current
+date, time and a weather forecast.
 
 ![Clock Weather Card](.github/assets/card.gif)
 [^1]
 
-Credits go to [basmilius](https://github.com/basmilius) for the awesome [weather icons](https://github.com/basmilius/weather-icons).
-
-## Migrating from v1 to v2
-
-* Configuration property `forecast_days` was renamed to `forecast_rows` to indicate that this attribute does not only work for daily, but also for hourly forecasts.
-* `date-fns` has been replaced by `luxon` for date/time formatting. If you configure `date_pattern`, make sure to migrate your pattern to comply with [luxon](https://moment.github.io/luxon/#/formatting?id=table-of-tokens). Additionally, the weekday is now [_not_ hardcoded](https://github.com/pkissling/clock-weather-card/issues/89) anymore.
-* Configuration property `use_browser_time` is now by default `false`, so by default the card will show the time of the current HA time zone.
-
-## FAQ
-
-* [Why don't I see the current day in my weather forecast?](#why-dont-i-see-the-current-day-in-my-weather-forecast)
-* [What does the card actually display?](#what-does-the-card-actually-display)
-
-### Why don't I see the current day in my weather forecast?
-
-Your weather provider may not provide today's weather as part of their weather forecast. You may consider switching to a different weather provider.
-[Open Meteo](https://www.home-assistant.io/integrations/open_meteo/) is the default weather integrations in home assistant and providings today's weather.
-
-### What does the card actually display?
+## What does the card actually display?
 
 ![image](https://user-images.githubusercontent.com/33731393/221779555-c2c25e12-4ff0-4c61-8fd7-94d5b1b214d3.png)
 
@@ -38,64 +39,53 @@ In the above image, the 9° on Thursday represents the low across all of the for
 The colored portion of the bar represents the range of temperatures that are forecast for that day (so 12° to 21° on Monday).
 The circle represents the current temperature (16° or roughly midway between 12° and 21° in your case).
 
-_Thanks to @deprecatedcoder for this text from [#143](https://github.com/pkissling/clock-weather-card/issues/143)_
+_Thanks to @deprecatedcoder for this text from [pkissling/clock-weather-card#143](https://github.com/pkissling/clock-weather-card/issues/143)_
 
 The basic idea of the forecast bars is to be able to understand the weather trend for the upcoming days in a single glance.
 
 ## Installation
 
-### Manual Installation
+### HACS (custom repository)
 
-1. Download the [clock-weather-card](https://www.github.com/pkissling/clock-weather-card/releases/latest/download/clock-weather-card.js).
-2. Place the file in your Home Assistant's `config/www` folder.
-3. Add the configuration to your `ui-lovelace.yaml`.
+1. Make sure [HACS](https://hacs.xyz) is installed.
+2. HACS → ⋮ → **Custom repositories** → add `https://github.com/Greminn/clock-weather-card-metservice`, category **Dashboard** (a.k.a. Lovelace / plugin).
+3. Find **Clock Weather Card (MetService)** in HACS and install it.
+4. Add the Lovelace resource (HACS usually does this for you):
 
    ```yaml
    resources:
-     - url: /local/clock-weather-card.js
+     - url: /hacsfiles/clock-weather-card-metservice/clock-weather-card-metservice.js
        type: module
    ```
 
-4. Add [configuration](#configuration) for the card in your `ui-lovelace.yaml`.
+5. Restart Home Assistant, then add the card to a dashboard.
 
-### Installation and tracking with `hacs`
+### Manual
 
-1. Make sure the [HACS](https://github.com/custom-components/hacs) component is installed and working.
-2. Search for `clock-weather-card` in HACS and install it.
-3. Depening on whether you manage your Lovelace resources via YAML (3i) or UI (3ii), you have to add the corresponding resources.
-   1. **YAML:** Add the configuration to your `ui-lovelace.yaml`.
+1. Download `clock-weather-card-metservice.js` from the [latest release](https://github.com/Greminn/clock-weather-card-metservice/releases/latest).
+2. Place it in `config/www/`.
+3. Add the resource:
 
-      ```yaml
-      resources:
-        - url: /hacsfiles/clock-weather-card/clock-weather-card.js
-          type: module
-      ```
-
-   2. **UI:** Add Lovelace resource [![My Home Assistant](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources).
-      _(Alternatively go to Settings -> Dashboards -> Resources -> Add Resource)_
-
-      ```yaml
-      URL: /hacsfiles/clock-weather-card/clock-weather-card.js
-      Type: JavaScript Module
-      ```
-
-4. Restart Home Assistant.
-5. Add [configuration](#configuration) for the card in your `ui-lovelace.yaml` or via the UI.
+   ```yaml
+   resources:
+     - url: /local/clock-weather-card-metservice.js
+       type: module
+   ```
 
 ## Configuration
 
 ### Minimal configuration
 
 ```yaml
-type: custom:clock-weather-card
-entity: weather.home  # replace with your weather providers's entity id
+type: custom:clock-weather-card-metservice
+entity: weather.home  # replace with your weather provider's entity id
 ```
 
 ### Full configuration
 
 ```yaml
-type: custom:clock-weather-card
-entity: weather.home  # replace with your weather providers's entity id
+type: custom:clock-weather-card-metservice
+entity: weather.home  # replace with your weather provider's entity id
 title: Home
 sun_entity: sun.sun
 temperature_sensor: sensor.outdoor_temp
@@ -124,7 +114,7 @@ aqi_sensor: sensor.air_quality_index
 
 | Name                  | Type             | Requirement  | Description                                                                                                                                                                                                                       | Default   |
 | --------------------- | ---------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| type                  | string           | **Required** | `custom:clock-weather-card`                                                                                                                                                                                                       |           |
+| type                  | string           | **Required** | `custom:clock-weather-card-metservice`                                                                                                                                                                                            |           |
 | entity                | string           | **Required** | ID of the weather entity                                                                                                                                                                                                          |           |
 | title                 | string           | **Optional** | Title of the card                                                                                                                                                                                                                 | `''`      |
 | sun_entity            | boolean          | **Optional** | ID of the sun entity. Used to determine whether to show a day or night icon. If sun integration is not enabled, day icon will be shown                                                                                            | `sun.sun` |
@@ -147,7 +137,19 @@ aqi_sensor: sensor.air_quality_index
 | time_zone             | string           | **Optional** | Uses the given [time zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to indicate the current date and time. If not provided, uses the time zone configured in HA                                              | `null`    |
 | show_decimal          | boolean          | **Optional** | Displays main temperature without rounding                                                                                                                                                                                        | `false`   |
 | apparent_sensor       | string           | **Optional** | ID of the apparent temperature sensor entity. It is used to show the apparent temperature based on a sensor and will only show it if value is provided.                                                                           | `''`      |
-| aqi_sensor       | string           | **Optional** | ID of the Air Quality Index sensor entity. It is used to show the AQI based on a sensor and will only show it if value is provided.                                                                           | `''`      |
+| aqi_sensor            | string           | **Optional** | ID of the Air Quality Index sensor entity. It is used to show the AQI based on a sensor and will only show it if value is provided.                                                                           | `''`      |
+
+## Migrating from upstream `clock-weather-card`
+
+Change `type: custom:clock-weather-card` to `type: custom:clock-weather-card-metservice`. Every
+other option is unchanged. You can keep both cards installed.
+
+## FAQ
+
+### Why don't I see the current day in my weather forecast?
+
+Your weather provider may not provide today's weather as part of their forecast. `metservice-weather`
+and [Open Meteo](https://www.home-assistant.io/integrations/open_meteo/) both include today.
 
 ## Footnotes
 

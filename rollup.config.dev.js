@@ -11,6 +11,7 @@ export default {
   output: {
     dir: './dist',
     format: 'es',
+    entryFileNames: 'clock-weather-card-metservice.js',
   },
   plugins: [
     image(),
