@@ -42,23 +42,25 @@ MetService's condition tokens (as delivered by `metservice-weather`) and the
 full icon set at [meteocons.com](https://meteocons.com). Mapping lives in
 [`src/metservice-icons.ts`](src/metservice-icons.ts).
 
-| MetService token | MetService icon | Meteocons icon | Day / night |
-|---|---|---|---|
-| `fine` | Sun | `clear-day` / `clear-night` | ✅ |
-| `partly-cloudy` | Sun with some cloud | `partly-cloudy-day` / `partly-cloudy-night` | ✅ |
-| `mostly-cloudy` | Cloud with a little sun | `cloudy` | — |
-| `cloudy` | Full cloud | `cloudy` | — |
-| `few-showers` | Sun, cloud, light rain | `partly-cloudy-day-rain` / `partly-cloudy-night-rain` | ✅ |
-| `showers` | Cloud with rain | `rain` | — |
-| `drizzle` | Cloud with fine drizzle | `partly-cloudy-day-rain` / `partly-cloudy-night-rain` | ✅ |
-| `rain` | Cloud with steady rain | `rain` | — |
-| `wind-rain` / `rain-wind` | Rain with wind | `rain` | — |
-| `thunder` | Cloud with lightning | `thunderstorms-day` / `thunderstorms-night` | ✅ |
-| `hail` | Cloud with hail | `hail` | — |
-| `snow` | Cloud with snow | `snow` | — |
-| `windy` | Wind | `windsock` | — |
-| `fog` | Fog | `fog-day` / `fog-night` | ✅ |
-| `frost` | Frost | `clear-night` | — |
+Icons shown in the **line** style (day variant where day/night differ).
+
+| MetService token | MetService icon | Meteocons icon | Day | Night |
+|---|---|---|:--:|:--:|
+| `fine` | Sun | `clear-day` / `clear-night` | <img src="src/icons/line/png/128/clear-day.png" width="36"> | <img src="src/icons/line/png/128/clear-night.png" width="36"> |
+| `partly-cloudy` | Sun with some cloud | `partly-cloudy-day` / `-night` | <img src="src/icons/line/png/128/partly-cloudy-day.png" width="36"> | <img src="src/icons/line/png/128/partly-cloudy-night.png" width="36"> |
+| `mostly-cloudy` | Cloud with a little sun | `cloudy` | <img src="src/icons/line/png/128/cloudy.png" width="36"> | |
+| `cloudy` | Full cloud | `cloudy` | <img src="src/icons/line/png/128/cloudy.png" width="36"> | |
+| `few-showers` | Sun, cloud, light rain | `partly-cloudy-day-rain` / `-night-rain` | <img src="src/icons/line/png/128/partly-cloudy-day-rain.png" width="36"> | <img src="src/icons/line/png/128/partly-cloudy-night-rain.png" width="36"> |
+| `showers` | Cloud with rain | `rain` | <img src="src/icons/line/png/128/rain.png" width="36"> | |
+| `drizzle` | Cloud with fine drizzle | `partly-cloudy-day-rain` / `-night-rain` | <img src="src/icons/line/png/128/partly-cloudy-day-rain.png" width="36"> | <img src="src/icons/line/png/128/partly-cloudy-night-rain.png" width="36"> |
+| `rain` | Cloud with steady rain | `rain` | <img src="src/icons/line/png/128/rain.png" width="36"> | |
+| `wind-rain` / `rain-wind` | Rain with wind | `rain` | <img src="src/icons/line/png/128/rain.png" width="36"> | |
+| `thunder` | Cloud with lightning | `thunderstorms-day` / `-night` | <img src="src/icons/line/png/128/thunderstorms-day.png" width="36"> | <img src="src/icons/line/png/128/thunderstorms-night.png" width="36"> |
+| `hail` | Cloud with hail | `hail` | <img src="src/icons/line/png/128/hail.png" width="36"> | |
+| `snow` | Cloud with snow | `snow` | <img src="src/icons/line/png/128/snow.png" width="36"> | |
+| `windy` | Wind | `windsock` | <img src="src/icons/line/png/128/windsock.png" width="36"> | |
+| `fog` | Fog | `fog-day` / `fog-night` | <img src="src/icons/line/png/128/fog-day.png" width="36"> | <img src="src/icons/line/png/128/fog-night.png" width="36"> |
+| `frost` | Frost | `clear-night` | <img src="src/icons/line/png/128/clear-night.png" width="36"> | |
 
 A trailing `-night` on a token is tolerated (the current-conditions feed can emit `few-showers-night`
 etc.). An unknown token falls back to the stock Home-Assistant-condition icon.
