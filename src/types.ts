@@ -12,6 +12,12 @@ declare global {
 export interface ClockWeatherCardConfig extends LovelaceCardConfig {
   entity: string
   title?: string
+  // MetService fork: an entity whose state is MetService's raw (un-mapped)
+  // condition token for the current conditions, and whose optional `forecast`
+  // attribute is a list of `{ date, condition }` for the forecast rows. Icons
+  // for the today section and any matching forecast row are then resolved from
+  // the raw token instead of Home Assistant's collapsed `weather` condition.
+  condition_entity?: string
   sun_entity?: string
   temperature_sensor?: string
   humidity_sensor?: string
@@ -38,6 +44,7 @@ export interface ClockWeatherCardConfig extends LovelaceCardConfig {
 export interface MergedClockWeatherCardConfig extends LovelaceCardConfig {
   entity: string
   title?: string
+  condition_entity?: string
   sun_entity: string
   temperature_sensor?: string
   humidity_sensor?: string

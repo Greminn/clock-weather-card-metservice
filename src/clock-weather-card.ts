@@ -29,6 +29,7 @@ import { localize } from './localize/localize'
 import { type HassEntity, type HassEntityBase } from 'home-assistant-js-websocket'
 import { extractMostOccuring, max, min, roundIfNotNull, roundUp } from './utils'
 import { animatedIcons, staticIcons } from './images'
+import { metserviceIconKey } from './metservice-icons'
 import { version } from '../package.json'
 import { safeRender } from './helpers'
 import { DateTime } from 'luxon'
@@ -217,7 +218,8 @@ export class ClockWeatherCard extends LitElement {
     const aqiTextColor = this.getAqiTextColor(aqi)
     const humidity = roundIfNotNull(this.getCurrentHumidity())
     const iconType = this.config.weather_icon_type
-    const icon = this.toIcon(state, iconType, false, this.getIconAnimationKind())
+    const msIconKey = metserviceIconKey(this.metserviceCondition())
+    const icon = this.toIcon(msIconKey ?? state, iconType, false, this.getIconAnimationKind())
     const weatherString = this.localize(`weather.${state}`)
     const localizedTemp = temp !== null ? this.toConfiguredTempWithUnit(tempUnit, temp) : null
     const localizedHumidity = humidity !== null ? `${humidity}% ${this.localize('misc.humidity')}` : null
@@ -274,8 +276,13 @@ export class ClockWeatherCard extends LitElement {
   }
 
   private renderForecastItem (forecast: MergedWeatherForecast, minTemp: number, maxTemp: number, currentTemp: number | null, temperatureUnit: TemperatureUnit, hourly: boolean, displayText: string, maxColOneChars: number): TemplateResult {
-    const weatherState = forecast.condition === 'pouring' ? 'raindrops' : forecast.condition === 'rainy' ? 'raindrop' : forecast.condition
-    const weatherIcon = this.toIcon(weatherState, 'fill', true, 'static')
+    const msIconKey = metserviceIconKey(this.metserviceCondition(forecast.datetime))
+    // MetService icons follow the today section's line/fill preference (the
+    // MetService tokens carry a real sun that the plain 'fill' rows drop);
+    // stock rows keep upstream's 'fill' + the pouring/rainy glyph remap.
+    const weatherState = msIconKey ?? (forecast.condition === 'pouring' ? 'raindrops' : forecast.condition === 'rainy' ? 'raindrop' : forecast.condition)
+    const iconType = msIconKey ? this.config.weather_icon_type : 'fill'
+    const weatherIcon = this.toIcon(weatherState, iconType, true, 'static')
     const tempUnit = this.getWeather().attributes.temperature_unit
     const isNow = hourly ? DateTime.now().hour === forecast.datetime.hour : DateTime.now().day === forecast.datetime.day
     const minTempDay = Math.round(isNow && currentTemp !== null ? Math.min(currentTemp, forecast.templow) : forecast.templow)
@@ -462,6 +469,7 @@ export class ClockWeatherCard extends LitElement {
       hide_clock: config.hide_clock ?? false,
       hide_date: config.hide_date ?? false,
       date_pattern: config.date_pattern ?? 'D',
+      condition_entity: config.condition_entity ?? undefined,
       use_browser_time: config.use_browser_time ?? false,
       time_zone: config.time_zone ?? undefined,
       show_decimal: config.show_decimal ?? false,
@@ -475,6 +483,26 @@ export class ClockWeatherCard extends LitElement {
     const iconMap = kind === 'animated' ? animatedIcons : staticIcons
     const icon = iconMap[type][weatherState]
     return icon?.[daytime] || icon
+  }
+
+  // MetService fork: raw MetService condition token for a given day (from the
+  // `forecast` attribute of `condition_entity`), or for the current conditions
+  // (that entity's state) when no date is given. Returns undefined when the
+  // option is unset, the entity is missing, or no forecast entry matches.
+  private metserviceCondition (date?: DateTime): string | undefined {
+    const entityId = this.config.condition_entity
+    if (!entityId) return undefined
+    const entity = this.hass.states[entityId]
+    if (!entity) return undefined
+    if (!date) return typeof entity.state === 'string' ? entity.state : undefined
+    const list = entity.attributes?.forecast as Array<{ date?: string, datetime?: string, condition?: string }> | undefined
+    if (!Array.isArray(list)) return undefined
+    const iso = date.toISODate()
+    const match = list.find((e) => {
+      const d = e.date ?? e.datetime
+      return typeof d === 'string' && d.slice(0, 10) === iso
+    })
+    return match?.condition
   }
 
   private getWeather (): Weather {

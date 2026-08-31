@@ -6,21 +6,65 @@
 > All the credit for the card belongs to [Patrick Kissling](https://github.com/pkissling) and its
 > contributors, and to [basmilius](https://github.com/basmilius) for the
 > [weather icons](https://github.com/basmilius/weather-icons). This fork exists only to make the
-> weather icons match the [MetService](https://www.metservice.com/) (New Zealand) app — MetService
-> draws conditions such as **few showers** (sun + cloud + rain) that Home Assistant's fixed
-> `weather` condition set can't represent, so the stock card shows plain rain instead.
+> weather icons match how [MetService](https://www.metservice.com/) (New Zealand) categorises the
+> weather — MetService distinguishes conditions such as **few showers** (sun + cloud + rain) that
+> Home Assistant's fixed `weather` condition set can't represent, so the stock card shows plain
+> rain instead.
+>
+> **Not affiliated with, or endorsed by, the Meteorological Service of New Zealand.** This card
+> contains no MetService content — it maps the condition *labels* that arrive as Home Assistant
+> entities (via the third-party [`metservice-weather`](https://github.com/nagelm/metservice-weather)
+> integration) to the [Meteocons](https://github.com/basmilius/weather-icons) icon set bundled with
+> the upstream card.
 
 ## What's different from upstream
 
 - The card is registered as `custom:clock-weather-card-metservice` (and ships as
   `clock-weather-card-metservice.js`), so it installs alongside the original without clashing.
-- **Planned:** a `condition_entity` option that drives the weather icons from the raw MetService
-  condition tokens exposed by the [`metservice-weather`](https://github.com/nagelm/metservice-weather)
-  integration (see [nagelm/metservice-weather#33](https://github.com/nagelm/metservice-weather/issues/33)),
-  mapping each MetService icon to its closest match in the bundled icon set.
+- **`condition_entity`** (see [Options](#options)) — when set, the today icon and the forecast-row
+  icons are chosen from MetService's raw, un-mapped condition token instead of Home Assistant's
+  collapsed `weather` condition. `few-showers` → sun-shower icon, `showers`/`rain` → heavier rain,
+  and so on. Without it the card behaves exactly like upstream.
 
-Until the icon work lands, this fork is functionally identical to upstream `v2.9.4` apart from the
-card name. Track upstream for the base card; open issues here only for the MetService behaviour.
+The raw tokens come from the [`metservice-weather`](https://github.com/nagelm/metservice-weather)
+integration. A first-class `sensor.<location>_condition` for this is requested in
+[nagelm/metservice-weather#33](https://github.com/nagelm/metservice-weather/issues/33); until it
+lands you can feed `condition_entity` a template sensor built from the integration's existing
+`*_condition_morning/afternoon/evening/overnight` and `*_condition_tomorrow` sensors.
+
+Everything else tracks upstream — for the base card, its options and its issues, see
+[`pkissling/clock-weather-card`](https://github.com/pkissling/clock-weather-card).
+
+### MetService condition → icon
+
+MetService's condition tokens (as delivered by `metservice-weather`) and the
+[Meteocons](https://github.com/basmilius/weather-icons) icon each currently maps to. Browse the
+full icon set at [meteocons.com](https://meteocons.com). Mapping lives in
+[`src/metservice-icons.ts`](src/metservice-icons.ts).
+
+| MetService token | MetService icon | Meteocons icon | Day / night |
+|---|---|---|---|
+| `fine` | Sun | `clear-day` / `clear-night` | ✅ |
+| `partly-cloudy` | Sun with some cloud | `partly-cloudy-day` / `partly-cloudy-night` | ✅ |
+| `mostly-cloudy` | Cloud with a little sun | `cloudy` | — |
+| `cloudy` | Full cloud | `cloudy` | — |
+| `few-showers` | Sun, cloud, light rain | `partly-cloudy-day-rain` / `partly-cloudy-night-rain` | ✅ |
+| `showers` | Cloud with rain | `rain` | — |
+| `drizzle` | Cloud with fine drizzle | `partly-cloudy-day-rain` / `partly-cloudy-night-rain` | ✅ |
+| `rain` | Cloud with steady rain | `rain` | — |
+| `wind-rain` / `rain-wind` | Rain with wind | `rain` | — |
+| `thunder` | Cloud with lightning | `thunderstorms-day` / `thunderstorms-night` | ✅ |
+| `hail` | Cloud with hail | `hail` | — |
+| `snow` | Cloud with snow | `snow` | — |
+| `windy` | Wind | `windsock` | — |
+| `fog` | Fog | `fog-day` / `fog-night` | ✅ |
+| `frost` | Frost | `clear-night` | — |
+
+A trailing `-night` on a token is tolerated (the current-conditions feed can emit `few-showers-night`
+etc.). An unknown token falls back to the stock Home-Assistant-condition icon.
+
+> **Work in progress** — these are first-pass choices, still being tuned against how MetService
+> actually draws each condition. `showers`/`drizzle`/`rain` in particular currently render similarly.
 
 ---
 
@@ -86,6 +130,7 @@ entity: weather.home  # replace with your weather provider's entity id
 ```yaml
 type: custom:clock-weather-card-metservice
 entity: weather.home  # replace with your weather provider's entity id
+condition_entity: sensor.home_metservice_conditions  # MetService raw-condition source (optional)
 title: Home
 sun_entity: sun.sun
 temperature_sensor: sensor.outdoor_temp
@@ -116,6 +161,7 @@ aqi_sensor: sensor.air_quality_index
 | --------------------- | ---------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | type                  | string           | **Required** | `custom:clock-weather-card-metservice`                                                                                                                                                                                            |           |
 | entity                | string           | **Required** | ID of the weather entity                                                                                                                                                                                                          |           |
+| condition_entity      | string           | **Optional** | ID of an entity supplying MetService's raw condition token(s). Its **state** sets the today icon; its optional **`forecast`** attribute — a list of `{ date, condition }` — sets the forecast-row icons (rows with no match fall back to the `entity` weather condition). Unset ⇒ card behaves like upstream. | `''` |
 | title                 | string           | **Optional** | Title of the card                                                                                                                                                                                                                 | `''`      |
 | sun_entity            | boolean          | **Optional** | ID of the sun entity. Used to determine whether to show a day or night icon. If sun integration is not enabled, day icon will be shown                                                                                            | `sun.sun` |
 | temperature_sensor    | string           | **Optional** | ID of the temperature sensor entity. Used to show the current temperature based on a sensor value instead of the weather forecast                                                                                                 | `''`      |
