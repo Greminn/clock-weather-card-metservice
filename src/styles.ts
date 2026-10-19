@@ -142,7 +142,7 @@ export default css`
   tide-summary {
     display: block;
     text-align: center;
-    margin-bottom: 0.1rem;
+    margin-bottom: 0.05rem;
   }
 
   clock-weather-card-tide-graph svg {
@@ -196,17 +196,19 @@ export default css`
 
   .tide-tick,
   .tide-day,
-  .tide-axis,
-  .tide-now-label {
+  .tide-axis {
     fill: var(--secondary-text-color, currentColor);
-    font-size: 8px;
+    font-size: 11px;
     text-transform: uppercase;
   }
 
-  .tide-day,
-  .tide-now-label {
+  .tide-day {
     font-weight: 600;
     fill: var(--primary-text-color, currentColor);
+  }
+
+  .tide-tick-arrow {
+    font-size: 0.8em;
   }
 
   tide-cell {

@@ -387,7 +387,14 @@ export class ClockWeatherCard extends LitElement {
     if (!url) return html``
     const h = this.config.iframe_height
     const height = h === undefined ? '200px' : typeof h === 'number' ? `${h}px` : h
-    return html`<iframe src=${url} style="height: ${height};" loading="lazy" referrerpolicy="no-referrer"></iframe>`
+    // Reload the embedded page periodically — a plain iframe never refreshes on
+    // its own, so bucket the current time and fold it into the URL. When the
+    // bucket rolls over the src attribute changes and the browser reloads it.
+    const refreshMin = this.config.iframe_refresh ?? 5
+    const src = refreshMin > 0
+      ? url + (url.includes('?') ? '&' : '?') + '_cwcm=' + Math.floor(this.currentDate.toMillis() / (refreshMin * 60000))
+      : url
+    return html`<iframe src=${src} style="height: ${height};" loading="lazy" referrerpolicy="no-referrer"></iframe>`
   }
 
   // MetService fork: a tide curve for the next ~24 h from the `tide_table`
@@ -422,8 +429,8 @@ export class ClockWeatherCard extends LitElement {
     if (seg.length < 2) return html``
 
     const W = 320
-    const H = 72
-    const pad = { l: 4, r: 4, t: 18, b: 15 }
+    const H = 76
+    const pad = { l: 4, r: 4, t: 7, b: 20 }
     const heights = seg.map((p) => p.h)
     let hMin = Math.min(...heights)
     let hMax = Math.max(...heights)
@@ -445,7 +452,13 @@ export class ClockWeatherCard extends LitElement {
       }
     }
     const linePath = 'M ' + curve.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' L ')
-    const areaPath = `${linePath} L ${curve[curve.length - 1][0].toFixed(1)},${(H - pad.b).toFixed(1)} L ${curve[0][0].toFixed(1)},${(H - pad.b).toFixed(1)} Z`
+    const by = H - pad.b
+    const areaPath = `${linePath} L ${curve[curve.length - 1][0].toFixed(1)},${by.toFixed(1)} L ${curve[0][0].toFixed(1)},${by.toFixed(1)} Z`
+    // the fill overshoots the plot box on both sides (bracketing extremes sit
+    // outside the window) and is clipped to it — round the clip's bottom corners
+    // so the visible fill matches the card's rounded style
+    const cr = 7
+    const clipPath = `M 0,0 L ${W},0 L ${W},${by - cr} Q ${W},${by} ${W - cr},${by} L ${cr},${by} Q 0,${by} 0,${by - cr} Z`
 
     // current tide height
     const nowMs = now.toMillis()
@@ -477,33 +490,30 @@ export class ClockWeatherCard extends LitElement {
       summary = `Tides are ${dirWord}, next ${nextExtreme.high ? 'high' : 'low'} tide in ${when}`
     }
 
-    // midnight boundary within the window
+    // midnight boundary within the window (drawn as a faint gridline only)
     const midnight = now.plus({ days: 1 }).startOf('day')
     const midnightVisible = midnight.toMillis() > winStart && midnight.toMillis() < winEnd
-    const mz = this.toZonedDate(midnight)
 
     return html`
       ${summary ? html`<tide-summary>${summary}</tide-summary>` : ''}
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%">
-        <clipPath id="mscw-tide-clip"><rect x="0" y="0" width=${W} height=${H - pad.b + 0.5} /></clipPath>
+        <clipPath id="mscw-tide-clip"><path d=${clipPath} /></clipPath>
         ${midnightVisible
-          ? svg`<line class="tide-grid" x1=${x(midnight.toMillis()).toFixed(1)} y1=${pad.t} x2=${x(midnight.toMillis()).toFixed(1)} y2=${H - pad.b} />
-                <text class="tide-day" x=${(x(midnight.toMillis()) + 2).toFixed(1)} y="10" text-anchor="start">${`${this.localize(`day.${mz.weekday}`)} ${mz.toFormat('d LLL')}`.toUpperCase()}</text>`
+          ? svg`<line class="tide-grid" x1=${x(midnight.toMillis()).toFixed(1)} y1=${pad.t} x2=${x(midnight.toMillis()).toFixed(1)} y2=${H - pad.b} />`
           : ''}
         <g clip-path="url(#mscw-tide-clip)">
           <path class="tide-area" d=${areaPath} />
           <path class="tide-line" d=${linePath} />
         </g>
-        <line class="tide-now" x1=${x(nowMs).toFixed(1)} y1=${pad.t - 6} x2=${x(nowMs).toFixed(1)} y2=${H - pad.b} />
+        <line class="tide-now" x1=${x(nowMs).toFixed(1)} y1=${(hNow !== undefined ? y(hNow) : pad.t).toFixed(1)} x2=${x(nowMs).toFixed(1)} y2=${H - pad.b} />
         ${hNow !== undefined
-          ? svg`<circle class="tide-now-dot" cx=${x(nowMs).toFixed(1)} cy=${y(hNow).toFixed(1)} r="2.8" />
-                <text class="tide-now-label" x=${x(nowMs).toFixed(1)} y=${pad.t - 8} text-anchor="middle">Now ${hNow.toFixed(1)}m</text>`
+          ? svg`<circle class="tide-now-dot" cx=${x(nowMs).toFixed(1)} cy=${y(hNow).toFixed(1)} r="2.8" />`
           : ''}
         ${visible.map((p) => {
           const isNext = p === nextLow || p === nextHigh
           return svg`
             <circle class="${isNext ? 'tide-dot tide-dot-next' : 'tide-dot'}" cx=${x(p.t.toMillis()).toFixed(1)} cy=${y(p.h).toFixed(1)} r=${isNext ? 2.6 : 2} />
-            <text class="tide-tick" x=${x(p.t.toMillis()).toFixed(1)} y=${H - 4} text-anchor="middle">${p.high ? 'H' : 'L'} ${this.time(p.t)}</text>`
+            <text class="tide-tick" x=${x(p.t.toMillis()).toFixed(1)} y=${H - 4} text-anchor="middle"><tspan class="tide-tick-arrow">${p.high ? '▲' : '▼'}</tspan> ${this.time(p.t)}</text>`
         })}
       </svg>
     `
@@ -717,6 +727,7 @@ export class ClockWeatherCard extends LitElement {
       tide_low_entity: config.tide_low_entity ?? undefined,
       iframe_url: config.iframe_url ?? undefined,
       iframe_height: config.iframe_height ?? undefined,
+      iframe_refresh: config.iframe_refresh ?? undefined,
       use_browser_time: config.use_browser_time ?? false,
       time_zone: config.time_zone ?? undefined,
       show_decimal: config.show_decimal ?? false,

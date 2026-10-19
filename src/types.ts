@@ -41,9 +41,11 @@ export interface ClockWeatherCardConfig extends LovelaceCardConfig {
   tide_low_entity?: string
   // MetService fork: embed a page (e.g. a Windy map at /local/windy.html) in
   // its own row, above the tide section. iframe_height accepts a number (px)
-  // or any CSS length.
+  // or any CSS length. iframe_refresh is minutes between reloads (default 5,
+  // 0 disables) — a plain iframe never refreshes itself.
   iframe_url?: string
   iframe_height?: string | number
+  iframe_refresh?: number
   sun_entity?: string
   temperature_sensor?: string
   humidity_sensor?: string
@@ -79,6 +81,7 @@ export interface MergedClockWeatherCardConfig extends LovelaceCardConfig {
   tide_low_entity?: string
   iframe_url?: string
   iframe_height?: string | number
+  iframe_refresh?: number
   sun_entity: string
   temperature_sensor?: string
   humidity_sensor?: string
